@@ -11,12 +11,12 @@ import csv
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlalchemy import text
 from src.db import get_engine
 
-SQL_DIR = os.path.join(os.path.dirname(__file__), "..", "sql")
+SQL_DIR  = os.path.join(os.path.dirname(__file__), "..", "sql")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 SEED_CSV = os.path.join(DATA_DIR, "seed_sources.csv")
 
@@ -59,14 +59,14 @@ def upsert_sources(engine) -> None:
     with engine.begin() as conn:
         for row in rows:
             params = {
-                "source_id":        row["source_id"].strip(),
+                "source_id":         row["source_id"].strip(),
                 "organization_name": row["organization_name"].strip(),
-                "page_name":        row["page_name"].strip(),
-                "category":         row["category"].strip(),
-                "language":         row["language"].strip(),
-                "url":              row["url"].strip(),
-                "is_active":        row["is_active"].strip() in ("1", "true", "True"),
-                "expected_fields":  row.get("expected_fields", "").strip() or None,
+                "page_name":         row["page_name"].strip(),
+                "category":          row["category"].strip(),
+                "language":          row["language"].strip(),
+                "url":               row["url"].strip(),
+                "is_active":         row["is_active"].strip() in ("1", "true", "True"),
+                "expected_fields":   row.get("expected_fields", "").strip() or None,
             }
             conn.execute(text(upsert_sql), params)
 

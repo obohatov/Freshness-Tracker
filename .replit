@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd freshness-tracker && python3 -m streamlit run dashboard/app.py"
+args = "python3 -m streamlit run dashboard/app.py"
 waitForPort = 8501
 
 [[ports]]

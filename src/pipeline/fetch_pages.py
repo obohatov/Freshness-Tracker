@@ -3,7 +3,6 @@ fetch_pages.py — fetch a single page and return raw snapshot fields.
 """
 
 import hashlib
-import json
 import logging
 import re
 
