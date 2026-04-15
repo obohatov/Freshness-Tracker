@@ -1,0 +1,116 @@
+Good. I want to do one final consolidation step.
+
+Please complete all of the following in one pass, without redesigning the project.
+
+## Goal
+
+1. Make ingestion capable of processing all active sources by default.
+2. Run a full pipeline pass over all 32 active sources.
+3. Update the README so it reflects the real current behavior and is suitable for project/demo submission.
+
+## Constraints
+
+* Do not redesign the schema.
+* Do not add new pipeline stages.
+* Do not add Docker, Airflow, LLMs, or external APIs.
+* Keep the code simple and deterministic.
+* Only make small code changes required for configurability and documentation.
+
+## Part 1 — Make ingestion source count configurable
+
+Update the ingestion logic so that:
+
+1. `MAX_SOURCES` is read from environment/config.
+2. If `MAX_SOURCES` is set, use it as a limit.
+3. If `MAX_SOURCES` is missing or empty, process **all active sources**.
+4. Keep deterministic ordering by `source_id`.
+5. Do not change extraction or change detection logic unless a tiny bug fix is required.
+
+Show me the exact updated code for:
+
+* `src/config.py`
+* `src/pipeline/run_ingestion.py`
+
+## Part 2 — Run a full pipeline pass over all active sources
+
+After the code update, run:
+
+1. ingestion over **all active sources**
+2. extraction
+3. change detection
+
+Then show me the resulting database counts for:
+
+* `sources`
+* `raw_snapshots`
+* `extracted_fields`
+* `change_events`
+
+Also show:
+
+* the latest 5 rows from `ingestion_runs`
+* whether change detection found any real changes
+* if `change_events` is still 0, explicitly explain that the pipeline ran successfully and that the monitored pages simply did not materially change between recent runs
+
+## Part 3 — Update README.md
+
+Update `README.md` so it reflects the actual current state of the project.
+
+Please make sure README includes:
+
+1. **Project goal**
+2. **Architecture overview**
+3. **Schema overview**
+4. **Analytical views overview**
+5. **Pipeline stages**
+
+   * ingestion
+   * extraction
+   * change detection
+6. **How to run**
+
+   * bootstrap
+   * ingestion
+   * extraction
+   * change detection
+   * dashboard
+7. **Replit / Streamlit note**
+
+   * mention `.streamlit/config.toml`
+   * mention that this is needed so Streamlit renders correctly in Replit preview
+8. **Current status**
+
+   * use the real latest DB counts
+9. **Change detection note**
+
+   * clearly explain the meaning of `change_events = 0` if it is still zero
+10. **Dashboard Preview**
+
+* add placeholders for 3 screenshots:
+
+  * overview
+  * recent ingestion runs / source coverage
+  * recent extracted snapshots / change detection
+
+Important:
+
+* Remove any wording that makes it sound like the project always runs with `MAX_SOURCES = 3`.
+* README should say that source count is configurable, and that by default the pipeline can process all active sources.
+
+## Final output
+
+At the end, show me:
+
+1. The full updated `README.md`
+2. The exact updated contents of:
+
+   * `src/config.py`
+   * `src/pipeline/run_ingestion.py`
+3. The final DB counts:
+
+   * `sources`
+   * `raw_snapshots`
+   * `extracted_fields`
+   * `change_events`
+4. The latest 5 `ingestion_runs`
+5. A short summary of what changed

@@ -3,7 +3,9 @@ run_ingestion.py — run one batch ingestion pass.
 
 Steps:
   1. Open an ingestion_runs row (status='running').
-  2. Pull up to MAX_SOURCES active sources, ordered by source_id.
+  2. Load active sources ordered by source_id.
+     - If MAX_SOURCES is set in config, fetch at most that many.
+     - If MAX_SOURCES is None (default), fetch all active sources.
   3. Fetch each page via fetch_pages.fetch_page().
   4. Insert one raw_snapshots row per page (success or failure).
   5. Close the ingestion_runs row with final counts and status.
@@ -19,6 +21,7 @@ from sqlalchemy import text
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+from src.config import MAX_SOURCES
 from src.db import get_engine
 from src.pipeline.fetch_pages import fetch_page
 
@@ -28,7 +31,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-MAX_SOURCES = 3
 
 INSERT_SNAPSHOT = text("""
     INSERT INTO raw_snapshots (
@@ -66,6 +68,33 @@ def _is_failure(data: dict) -> bool:
     )
 
 
+def _load_sources(engine) -> list[dict]:
+    """Return active sources ordered by source_id, respecting MAX_SOURCES if set."""
+    if MAX_SOURCES is not None:
+        sql = text("""
+            SELECT source_id, url
+            FROM sources
+            WHERE is_active = TRUE
+            ORDER BY source_id
+            LIMIT :limit
+        """)
+        with engine.connect() as conn:
+            rows = conn.execute(sql, {"limit": MAX_SOURCES}).fetchall()
+        logger.info("MAX_SOURCES=%d — loading up to %d source(s)", MAX_SOURCES, MAX_SOURCES)
+    else:
+        sql = text("""
+            SELECT source_id, url
+            FROM sources
+            WHERE is_active = TRUE
+            ORDER BY source_id
+        """)
+        with engine.connect() as conn:
+            rows = conn.execute(sql).fetchall()
+        logger.info("MAX_SOURCES not set — loading all active sources")
+
+    return [dict(r._mapping) for r in rows]
+
+
 def run() -> None:
     engine = get_engine()
 
@@ -77,20 +106,8 @@ def run() -> None:
 
     logger.info("Ingestion run %d started", run_id)
 
-    # 2. Load active sources — deterministic order by source_id
-    with engine.connect() as conn:
-        rows = conn.execute(
-            text("""
-                SELECT source_id, url
-                FROM sources
-                WHERE is_active = TRUE
-                ORDER BY source_id
-                LIMIT :limit
-            """),
-            {"limit": MAX_SOURCES},
-        ).fetchall()
-
-    sources       = [dict(r._mapping) for r in rows]
+    # 2. Load active sources
+    sources       = _load_sources(engine)
     sources_total = len(sources)
     logger.info("Processing %d source(s)", sources_total)
 
@@ -129,7 +146,7 @@ def run() -> None:
 
     # 4. Close ingestion run
     status = (
-        "success"          if failed == 0
+        "success"              if failed == 0
         else "partial_success" if succeeded > 0
         else "failed"
     )
@@ -157,7 +174,7 @@ def run() -> None:
     print(f"  failed     : {failed}")
     print(f"  status     : {status}")
     if error_summary:
-        print(f"  errors     : {error_summary}")
+        print(f"  errors     : {error_summary[:500]}")
     print(f"{'─' * 40}\n")
 
 
