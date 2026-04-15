@@ -17,7 +17,8 @@ from sqlalchemy import text
 from src.db import get_engine
 
 SQL_DIR = os.path.join(os.path.dirname(__file__), "..", "sql")
-SEED_CSV = os.path.join(SQL_DIR, "seed_sources.csv")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+SEED_CSV = os.path.join(DATA_DIR, "seed_sources.csv")
 
 
 def apply_sql_file(engine, filename: str) -> None:

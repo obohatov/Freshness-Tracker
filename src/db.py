@@ -1,20 +1,20 @@
+import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from src.config import DATABASE_URL
 
+_engine: Engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
 
 def get_engine() -> Engine:
-    return create_engine(DATABASE_URL)
+    return _engine
 
 
-def query_df(sql: str, params: dict = None):
-    import pandas as pd
-    engine = get_engine()
-    with engine.connect() as conn:
+def query_df(sql: str, params: dict = None) -> pd.DataFrame:
+    with _engine.connect() as conn:
         return pd.read_sql_query(text(sql), conn, params=params)
 
 
 def execute(sql: str, params: dict = None) -> None:
-    engine = get_engine()
-    with engine.begin() as conn:
+    with _engine.begin() as conn:
         conn.execute(text(sql), params or {})

@@ -15,12 +15,13 @@ A batch data pipeline that monitors Belgian public-service web pages, stores pag
 freshness-tracker/
 ├── dashboard/
 │   └── app.py              # Streamlit dashboard
+├── data/
+│   └── seed_sources.csv    # Seed data for monitored pages
 ├── scripts/
 │   └── bootstrap_db.py     # Apply schema, views, and seed sources
 ├── sql/
 │   ├── 00_schema.sql       # Authoritative table definitions
-│   ├── 01_views.sql        # Analytical views for dashboard
-│   └── seed_sources.csv    # Seed data for monitored pages
+│   └── 01_views.sql        # Analytical views for dashboard
 ├── src/
 │   ├── config.py           # Reads DATABASE_URL from environment
 │   └── db.py               # SQLAlchemy connection helpers
@@ -55,7 +56,7 @@ On Replit, `DATABASE_URL` is injected automatically — no `.env` file needed.
 
 ### 3. Bootstrap the database
 
-This applies the schema, creates the analytical views, and loads the seed source list:
+Applies the schema, creates all analytical views, and loads the seed source list:
 
 ```bash
 python scripts/bootstrap_db.py
@@ -84,4 +85,4 @@ The dashboard reads from these PostgreSQL views:
 - **Ingestion** — fetch pages and store raw snapshots (`raw_snapshots` table)
 - **Extraction** — parse structured fields from snapshots (`extracted_fields` table)
 - **Change detection** — compare successive snapshots and write `change_events`
-- **Scheduling** — add Airflow or cron-based batch execution
+- **Scheduling** — batch execution
