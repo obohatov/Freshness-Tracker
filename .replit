@@ -27,8 +27,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd freshness-tracker && python3 -m streamlit run dashboard/app.py --server.port 8000 --server.address 0.0.0.0 --server.headless true"
-waitForPort = 8000
+args = "cd freshness-tracker && python3 -m streamlit run dashboard/app.py"
+waitForPort = 8501
 
 [[ports]]
 localPort = 5173
@@ -45,3 +45,7 @@ externalPort = 8080
 [[ports]]
 localPort = 8081
 externalPort = 80
+
+[[ports]]
+localPort = 8501
+externalPort = 3000
