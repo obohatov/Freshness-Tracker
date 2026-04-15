@@ -160,8 +160,7 @@ No external APIs. All extraction is pure Python regex.
 | `FETCH_TIMEOUT` | `15` | HTTP request timeout in seconds |
 | `USER_AGENT` | `FreshnessTracker/0.1 ...` | User-Agent header sent with requests |
 
-On Replit, `DATABASE_URL` is injected automatically. Copy `.env.example` to
-`.env` for local use.
+Copy `.env.example` to `.env` and set `DATABASE_URL` before running.
 
 ---
 
@@ -221,11 +220,11 @@ seven sections update automatically on page load.
 
 ---
 
-## Streamlit + Replit preview
+## Streamlit configuration
 
-When Streamlit runs behind Replit's proxy/iframe, its default settings reject
-WebSocket connections as cross-origin requests, producing a blank loading
-screen. The file `.streamlit/config.toml` at the repository root fixes this:
+The repository includes `.streamlit/config.toml` which sets the server address
+and port and disables CORS and XSRF protection for compatible dashboard startup
+in networked or proxied environments:
 
 ```toml
 [server]
@@ -235,10 +234,6 @@ port = 8501
 enableCORS = false
 enableXsrfProtection = false
 ```
-
-`enableCORS = false` and `enableXsrfProtection = false` are the critical
-settings. Without them, the browser console shows persistent
-`WebSocket onerror` events and the app never renders.
 
 ---
 
@@ -307,7 +302,7 @@ comparison logic and the `0 errors` extraction output.
 ```
 (repository root)
 ├── .streamlit/
-│   └── config.toml             # Replit-compatible Streamlit server settings
+│   └── config.toml             # Streamlit server settings
 ├── dashboard/
 │   └── app.py                  # Streamlit dashboard (7 sections, 7 views)
 ├── data/
