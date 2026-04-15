@@ -3,12 +3,13 @@ run_ingestion.py — run one batch ingestion pass.
 
 Steps:
   1. Open an ingestion_runs row (status='running').
-  2. Pull up to MAX_SOURCES active sources.
+  2. Pull up to MAX_SOURCES active sources, ordered by source_id.
   3. Fetch each page via fetch_pages.fetch_page().
   4. Insert one raw_snapshots row per page (success or failure).
   5. Close the ingestion_runs row with final counts and status.
 """
 
+import json
 import logging
 import os
 import sys
@@ -33,11 +34,13 @@ INSERT_SNAPSHOT = text("""
     INSERT INTO raw_snapshots (
         source_id, run_id, fetched_at,
         http_status, final_url, content_type,
-        content_hash, page_title, raw_text
+        content_hash, page_title, raw_text,
+        response_headers_json
     ) VALUES (
         :source_id, :run_id, :fetched_at,
         :http_status, :final_url, :content_type,
-        :content_hash, :page_title, :raw_text
+        :content_hash, :page_title, :raw_text,
+        :response_headers_json
     )
 """)
 
@@ -53,6 +56,16 @@ UPDATE_RUN = text("""
 """)
 
 
+def _is_failure(data: dict) -> bool:
+    status = data["http_status"]
+    raw    = data.get("raw_text") or ""
+    return (
+        status is None
+        or status >= 400
+        or raw.startswith("ERROR:")
+    )
+
+
 def run() -> None:
     engine = get_engine()
 
@@ -64,14 +77,20 @@ def run() -> None:
 
     logger.info("Ingestion run %d started", run_id)
 
-    # 2. Load active sources
+    # 2. Load active sources — deterministic order by source_id
     with engine.connect() as conn:
         rows = conn.execute(
-            text("SELECT source_id, url FROM sources WHERE is_active = TRUE LIMIT :limit"),
+            text("""
+                SELECT source_id, url
+                FROM sources
+                WHERE is_active = TRUE
+                ORDER BY source_id
+                LIMIT :limit
+            """),
             {"limit": MAX_SOURCES},
         ).fetchall()
 
-    sources = [dict(r._mapping) for r in rows]
+    sources       = [dict(r._mapping) for r in rows]
     sources_total = len(sources)
     logger.info("Processing %d source(s)", sources_total)
 
@@ -84,35 +103,33 @@ def run() -> None:
         logger.info("→ %s", source["url"])
         data = fetch_page(source)
 
-        is_error = (
-            data["http_status"] is None
-            or (data["raw_text"] or "").startswith("ERROR:")
-        )
-
         with engine.begin() as conn:
             conn.execute(INSERT_SNAPSHOT, {
-                "source_id":    data["source_id"],
-                "run_id":       run_id,
-                "fetched_at":   datetime.now(timezone.utc),
-                "http_status":  data["http_status"],
-                "final_url":    data["final_url"],
-                "content_type": data["content_type"],
-                "content_hash": data["content_hash"],
-                "page_title":   data["page_title"],
-                "raw_text":     data["raw_text"],
+                "source_id":             data["source_id"],
+                "run_id":                run_id,
+                "fetched_at":            datetime.now(timezone.utc),
+                "http_status":           data["http_status"],
+                "final_url":             data["final_url"],
+                "content_type":          data["content_type"],
+                "content_hash":          data["content_hash"],
+                "page_title":            data["page_title"],
+                "raw_text":              data["raw_text"],
+                "response_headers_json": json.dumps(data["response_headers_json"]),
             })
 
-        if is_error:
+        if _is_failure(data):
             failed += 1
-            errors.append(f"{source['url']}: {data.get('raw_text', 'unknown error')}")
-            logger.warning("  FAILED")
+            errors.append(
+                f"{source['url']}: HTTP {data['http_status']} — {data.get('raw_text', '')[:120]}"
+            )
+            logger.warning("  FAILED (HTTP %s)", data["http_status"])
         else:
             succeeded += 1
             logger.info("  OK (HTTP %s)", data["http_status"])
 
     # 4. Close ingestion run
     status = (
-        "success"        if failed == 0
+        "success"          if failed == 0
         else "partial_success" if succeeded > 0
         else "failed"
     )
@@ -133,7 +150,6 @@ def run() -> None:
         run_id, status, sources_total, succeeded, failed,
     )
 
-    # 5. Print summary
     print(f"\n{'─' * 40}")
     print(f"  run_id     : {run_id}")
     print(f"  attempted  : {sources_total}")

@@ -6,8 +6,9 @@ A batch data pipeline that monitors Belgian public-service web pages, stores pag
 
 - Python 3.10+
 - PostgreSQL
-- SQLAlchemy (connection helpers only — no ORM models yet)
+- SQLAlchemy (connection helpers — no ORM models)
 - Streamlit (dashboard)
+- requests + BeautifulSoup (ingestion)
 
 ## Project structure
 
@@ -23,9 +24,13 @@ freshness-tracker/
 │   ├── 00_schema.sql       # Authoritative table definitions
 │   └── 01_views.sql        # Analytical views for dashboard
 ├── src/
-│   ├── config.py           # Reads DATABASE_URL from environment
-│   └── db.py               # SQLAlchemy connection helpers
+│   ├── config.py           # Reads DATABASE_URL and other settings from environment
+│   ├── db.py               # SQLAlchemy connection helpers
+│   └── pipeline/
+│       ├── fetch_pages.py      # Fetch one page, return snapshot fields
+│       └── run_ingestion.py    # Orchestrate a full ingestion batch run
 ├── .env.example            # Environment variable template
+├── .gitignore
 ├── requirements.txt        # Python dependencies
 └── README.md
 ```
@@ -54,6 +59,13 @@ DATABASE_URL=postgresql://user:password@localhost:5432/freshness_tracker
 
 On Replit, `DATABASE_URL` is injected automatically — no `.env` file needed.
 
+Optional environment variables (with defaults):
+
+```
+FETCH_TIMEOUT=15        # HTTP request timeout in seconds
+USER_AGENT=FreshnessTracker/0.1 (monitoring public-service pages)
+```
+
 ### 3. Bootstrap the database
 
 Applies the schema, creates all analytical views, and loads the seed source list:
@@ -62,7 +74,7 @@ Applies the schema, creates all analytical views, and loads the seed source list
 python scripts/bootstrap_db.py
 ```
 
-The script is safe to re-run — it uses `CREATE TABLE IF NOT EXISTS` and upserts on `source_id`.
+Safe to re-run — uses `CREATE TABLE IF NOT EXISTS` and upserts on `source_id`.
 
 ## Running the dashboard
 
@@ -70,7 +82,7 @@ The script is safe to re-run — it uses `CREATE TABLE IF NOT EXISTS` and upsert
 streamlit run dashboard/app.py
 ```
 
-The dashboard reads from these PostgreSQL views:
+Reads from these PostgreSQL views:
 
 | View | Purpose |
 |---|---|
@@ -80,9 +92,29 @@ The dashboard reads from these PostgreSQL views:
 | `vw_latest_alerts` | Most recent detected changes |
 | `vw_most_changed_pages` | Pages with the most changes |
 
+## Running ingestion
+
+Fetches the first 3 active sources (ordered by `source_id`) and stores raw snapshots:
+
+```bash
+python src/pipeline/run_ingestion.py
+```
+
+Each run creates one row in `ingestion_runs` and one row in `raw_snapshots` per page attempted.
+
+## Current implementation status
+
+| Component | Status |
+|---|---|
+| Schema + views | Done |
+| Source seeding | Done |
+| Batch ingestion (fetch + snapshot) | Done |
+| Field extraction | Not yet implemented |
+| Change detection | Not yet implemented |
+| Scheduling | Not yet implemented |
+
 ## Next steps (not implemented yet)
 
-- **Ingestion** — fetch pages and store raw snapshots (`raw_snapshots` table)
 - **Extraction** — parse structured fields from snapshots (`extracted_fields` table)
 - **Change detection** — compare successive snapshots and write `change_events`
 - **Scheduling** — batch execution
