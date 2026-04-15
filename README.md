@@ -255,15 +255,15 @@ Seven sections, all reading live from PostgreSQL views:
 
 **1 — Overview KPIs and pipeline status**
 
-![Dashboard overview — KPIs and pipeline status](docs/screenshots/01_overview.png)
+![Dashboard overview — KPIs and pipeline status](docs/01_overview.png)
 
 **2 — Recent ingestion runs and source coverage**
 
-![Recent ingestion runs and source coverage](docs/screenshots/02_ingestion_coverage.png)
+![Recent ingestion runs and source coverage](docs/02_ingestion_coverage.png)
 
 **3 — Extracted snapshots and change detection**
 
-![Extracted snapshots and change detection summary](docs/screenshots/03_extraction_changes.png)
+![Extracted snapshots and change detection summary](docs/03_extraction_changes.png)
 
 ---
 
