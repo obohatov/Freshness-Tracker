@@ -1,0 +1,31 @@
+modules = ["python-3.11", "postgresql-16"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+packages = ["glibcLocales", "xcodebuild", "zlib"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Freshness Tracker Dashboard"
+
+[[workflows.workflow]]
+name = "Freshness Tracker Dashboard"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd freshness-tracker && python3 -m streamlit run dashboard/app.py --server.port 8000 --server.address 0.0.0.0 --server.headless true"
+waitForPort = 8000
